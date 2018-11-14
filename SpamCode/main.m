@@ -28,10 +28,12 @@ void handleXcassetsFiles(NSString *directory);
 void deleteComments(NSString *directory);
 void modifyProjectName(NSString *projectDir, NSString *oldName, NSString *newName);
 void modifyClassNamePrefix(NSMutableString *projectContent, NSString *sourceCodeDir, NSArray<NSString *> *ignoreDirNames, NSString *oldName, NSString *newName);
+BOOL needIgnore(NSString *filePath);
 
 NSString *gOutParameterName = nil;
 NSString *gSourceCodeDir = nil;
-
+NSArray<NSString *> *ignoreFileNames = nil;
+NSArray<NSString *> *ignoreFileTypes = nil;
 #pragma mark - 公共方法
 
 static const NSString *kRandomAlphabet = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -99,6 +101,13 @@ void renameFile(NSString *oldPath, NSString *newPath) {
     NSError *error;
     [[NSFileManager defaultManager] moveItemAtPath:oldPath toPath:newPath error:&error];
     if (error) {
+        //如果目标文件已经存在则先删除，再renamez操作 -> 即采取覆盖操作
+        if (error.code == 516) {
+            [[NSFileManager defaultManager] removeItemAtPath:newPath error:&error];
+            renameFile(oldPath, newPath);
+            printf("文件%s被覆盖\n",  newPath.UTF8String);
+            return;
+        }
         printf("修改文件名称失败。\n  oldPath=%s\n  newPath=%s\n  ERROR:%s\n", oldPath.UTF8String, newPath.UTF8String, error.localizedDescription.UTF8String);
         abort();
     }
@@ -222,7 +231,18 @@ int main(int argc, const char * argv[]) {
                 continue;
             }
             if ([argument isEqualToString:@"-ignoreDirNames"]) {
-                ignoreDirNames = [arguments[++i] componentsSeparatedByString:@","];
+                NSString *argumentsString = [arguments[++i] stringByReplacingOccurrencesOfString:@"-" withString:@" "];
+                ignoreDirNames = [argumentsString componentsSeparatedByString:@","];
+                continue;
+            }
+            if ([argument isEqualToString:@"-ignoreFileNames"]) {
+                NSString *argumentsString = [arguments[++i] stringByReplacingOccurrencesOfString:@"-" withString:@" "];
+                ignoreFileNames = [argumentsString componentsSeparatedByString:@","];
+                continue;
+            }
+            if ([argument isEqualToString:@"-ignoreFileTypes"]) {
+                NSString *argumentsString = [arguments[++i] stringByReplacingOccurrencesOfString:@"-" withString:@" "];
+                ignoreFileTypes = [argumentsString componentsSeparatedByString:@","];
                 continue;
             }
         }
@@ -287,6 +307,10 @@ void recursiveDirectory(NSString *directory, NSArray<NSString *> *ignoreDirNames
     NSArray<NSString *> *files = [fm contentsOfDirectoryAtPath:directory error:nil];
     BOOL isDirectory;
     for (NSString *filePath in files) {
+        // 如果已经是拓展文件直接跳过
+        if (needIgnore(filePath)) {
+            continue;
+        }
         NSString *path = [directory stringByAppendingPathComponent:filePath];
         if ([fm fileExistsAtPath:path isDirectory:&isDirectory] && isDirectory) {
             if (![ignoreDirNames containsObject:filePath]) {
@@ -747,6 +771,9 @@ void modifyClassNamePrefix(NSMutableString *projectContent, NSString *sourceCode
     NSArray<NSString *> *files = [fm contentsOfDirectoryAtPath:sourceCodeDir error:nil];
     BOOL isDirectory;
     for (NSString *filePath in files) {
+        if (needIgnore(filePath)) {
+            continue;
+        }
         NSString *path = [sourceCodeDir stringByAppendingPathComponent:filePath];
         if ([fm fileExistsAtPath:path isDirectory:&isDirectory] && isDirectory) {
             if (![ignoreDirNames containsObject:filePath]) {
@@ -807,4 +834,17 @@ void modifyClassNamePrefix(NSMutableString *projectContent, NSString *sourceCode
         NSString *regularExpression = [NSString stringWithFormat:@"\\b%@\\b", fileName];
         regularReplacement(projectContent, regularExpression, newClassName);
     }
+}
+
+#pragma mark - 忽略逻辑
+BOOL needIgnore(NSString *filePath) {
+    // 如果为忽略的文件类型直接跳过
+    if ([ignoreFileTypes containsObject:filePath.pathExtension]) return true;
+    // 如果为忽略的文件直接跳过
+    if ([ignoreFileNames containsObject:filePath]) return true;
+    // 如果为系统类拓展文件直接跳过
+    if ([ignoreFileNames containsObject:@"+"]) {
+        if (([filePath hasPrefix:@"UI"] || [filePath hasPrefix:@"NS"]) && [filePath containsString:@"+"]) return true;
+    }
+    return false;
 }
