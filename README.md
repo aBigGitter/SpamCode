@@ -31,8 +31,8 @@ $ ./SpamCode \
 - **-modifyClassNamePrefix [工程文件 xcodeproj 绝对路径] [原前缀]>[新前缀]** 修改源代码类名前缀。程序会扫描`源码文件夹绝对路径`下的 .h .swift 文件，修改文件名，修改使用该类名的代码，修改`工程文件`中的文件名。文件名有`原前缀`的会修改成`新前缀`，如：`原前缀ViewController`变成`新前缀ViewController`；没有`原前缀`的会增加`新前缀`，如：`ViewController`变成`新前缀ViewController`。
 - **-spamCodeOut [垃圾代码文件输出目录] [垃圾代码方法增加的参数名]** 生成垃圾代码。程序会扫描`源码文件夹绝对路径`下的 .m .swift 文件中的类和方法，并生成`category`和`extension`文件，文件中的方法是在代码原方法的基础上增加`垃圾代码方法增加的参数名`参数。如：`-spamCodeOut /dir AppLog`，`- (void)setupKeys {}`>`- (void)setupKeysAppLog:(NSString *)appLog {}`，`- (void)foo:(NSString *)str {}`>`- (void)foo:(NSString *)str appLog:(NSString *)appLog {}`
 - **-ignoreDirNames [忽略文件夹名称字符串]** 忽略这些文件夹，对`-modifyClassNamePrefix`和`-spamCodeOut`参数有效。目前只会忽略`源码文件夹绝对路径`下一级的这些目录。如：`/p/s -ignoreDirNames categorys`，那么`/p/s/categorys`会被忽略，但`/p/s/viewControllers/categorys`不会忽略。如果文件名包含空格请使用“-”代替。
--**-ignoreFileNames [忽略的文件名]** 例如，CustomerClassA.m,CustomerClassB.m。如果要忽略系统类拓展文件，可用“+”。
--**-ignoreFileTypes [忽略的文件类型]**  例如，bundle,json。
+- **-ignoreFileNames [忽略的文件名]** 例如，CustomerClassA.m,CustomerClassB.m。如果要忽略系统类拓展文件，可用“+”。
+- **-ignoreFileTypes [忽略的文件类型]**  例如，bundle,json。
 - **-handleXcassets** 修改`xxx.xcassets`文件夹中的 png 资源文件名，同时也`Contents.json`文件中的关联名称，不会影响代码中使用图片。
 - **-deleteComments** 删除工程目录下 .h .m .swift 文件中的注释和空行。
 
